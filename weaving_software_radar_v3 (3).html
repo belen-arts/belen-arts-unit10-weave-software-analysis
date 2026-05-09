@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weaving Software Accessibility Comparison Diagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #1a1a1a; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  p.subtitle { font-size: 13px; color: #888; margin-bottom: 1rem; }
+
+  .instructions {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    background: #f5f5f3; border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 1.25rem;
+    font-size: 12px; color: #666;
+  }
+  .instructions span { display: flex; align-items: center; gap: 6px; }
+
+  #legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  #legend button { display: flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border-radius: 20px; cursor: pointer; font-family: inherit; }
+
+  #chart-wrap { position: relative; width: 100%; height: 520px; }
+
+  #score-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 20px; }
+  .card { border-radius: 8px; padding: 10px 12px; background: #f5f5f3; cursor: pointer; transition: box-shadow 0.15s; }
+  .card:hover { box-shadow: 0 0 0 1.5px #ccc; }
+  .card-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .card-note { font-size: 11px; color: #888; margin-bottom: 6px; }
+  .card-score { font-size: 20px; font-weight: 500; }
+  .card-score span { font-size: 11px; color: #aaa; }
+
+  .breakdown { margin-top: 1.25rem; border: 0.5px solid #e0e0e0; border-radius: 10px; padding: 1.25rem; display: none; }
+  .breakdown.visible { display: block; }
+  .breakdown-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .breakdown-name { font-size: 16px; font-weight: 500; }
+  .breakdown-close { font-size: 20px; cursor: pointer; color: #aaa; background: none; border: none; line-height: 1; padding: 0; }
+  .breakdown-close:hover { color: #333; }
+  .score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .score-axis { font-size: 12px; color: #555; width: 160px; flex-shrink: 0; }
+  .score-bar-wrap { flex: 1; background: #efefed; border-radius: 4px; height: 6px; }
+  .score-bar { height: 6px; border-radius: 4px; }
+  .score-val { font-size: 12px; font-weight: 500; width: 24px; text-align: right; }
+  .score-reason { font-size: 11px; color: #888; margin-left: 170px; margin-bottom: 10px; line-height: 1.5; }
+
+  .annotation { margin-top: 2rem; padding: 1rem 1.25rem; border-left: 2px solid #FAC775; background: #FAEEDA; border-radius: 0 8px 8px 0; font-size: 13px; color: #633806; line-height: 1.6; }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a1a; color: #e0e0e0; }
+    .instructions { background: #2a2a2a; color: #999; }
+    .card { background: #2a2a2a; }
+    .card:hover { box-shadow: 0 0 0 1.5px #555; }
+    .breakdown { border-color: #333; }
+    .score-bar-wrap { background: #333; }
+    .score-axis { color: #aaa; }
+    .score-reason { color: #777; }
+    .breakdown-close:hover { color: #eee; }
+    .annotation { background: #2a1f00; color: #FAC775; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Weaving software. Accessibility comparison</h1>
+<p class="subtitle">Scored 1–5 across: cost/affordability, open source/free, ease of use, community support, beginner accessibility</p>
+
+<div class="instructions">
+  <span>Click a name in the legend to show or hide it on the chart</span>
+  <span>Click a score card below to see why it was rated that way</span>
+  <span>Click the × on an open card to close it</span>
+</div>
+
+<div id="legend"></div>
+<div id="chart-wrap">
+  <canvas id="radarChart" role="img" aria-label="Radar chart comparing 10 weaving softwares on 5 accessibility dimensions."></canvas>
+</div>
+<div id="score-cards"></div>
+<div id="breakdown" class="breakdown"></div>
+
+<div class="annotation">
+  <strong>Research note:</strong> The softwares built <em>by</em> weavers (TempoWeave, WeaveIt, Handweaving.net) consistently score higher on ease of use and beginner accessibility than industry tools (PointCarre, ArahWeave). Yet the open source axis remains almost universally low — textile software culture does not share. Compare: GitHub, Arduino, Fab Labs. Why does a knitting pattern cost £8 when code is free?
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const softwares = [
+  {
+    name:'WeavePoint', note:'Windows · around £400 · professional',
+    scores:[2,1,3,3,2], color:'#D85A30', dash:[],
+    reasons:[
+      'Costs around £400 for a full licence — steep for students or independent makers.',
+      'Fully proprietary, closed source. No community access to the codebase.',
+      'Well-structured interface once learned, but not designed for beginners.',
+      'Active user base on forums like Weavolution; developer Ingrid is known to respond to bugs directly.',
+      'Designed for experienced designers and loom drivers — too complex as a first tool.'
+    ]
+  },
+  {
+    name:'PointCarre', note:'Mac+PC · enterprise · industry',
+    scores:[1,1,4,4,1], color:'#534AB7', dash:[6,3],
+    reasons:[
+      'Enterprise pricing — not publicly listed, requires a quote. Used by Tommy Hilfiger, Calvin Klein, Ralph Lauren.',
+      'Fully proprietary. No open source access whatsoever.',
+      'Described as intuitive within its ecosystem, with seamless transitions between modules.',
+      'Strong professional support network and e-learning platform — but only for paying clients.',
+      'Built entirely for industry professionals. Inaccessible and irrelevant to independent or student weavers.'
+    ]
+  },
+  {
+    name:'Fiberworks PCW', note:'Mac+PC · £150 · community fave',
+    scores:[3,1,4,4,3], color:'#0F6E56', dash:[3,3],
+    reasons:[
+      'Around £150 — mid-range. More affordable than WeavePoint but still a barrier for many students.',
+      'Proprietary software. Not open source.',
+      'Often described as thinking "like weavers do" — intuitive layout, instant colour feedback.',
+      'Probably the most discussed weaving software on forums. Large and active enthusiast community.',
+      'Three proficiency levels help beginners progress, but there is still a learning curve.'
+    ]
+  },
+  {
+    name:'PixeLoom', note:'Mac+PC · £80 · beginner friendly',
+    scores:[4,1,5,3,4], color:'#185FA5', dash:[8,3,2,3],
+    reasons:[
+      'Around £80 — the most affordable of the paid desktop options.',
+      'Proprietary, not open source.',
+      'Widely praised for ease of use. Simple tools for editing drafts and virtual sampling.',
+      'Smaller community than Fiberworks but decent tutorial support via its own site.',
+      'One of the few tools mentioned specifically as a good starting point for new weavers.'
+    ]
+  },
+  {
+    name:'ArahWeave', note:'Linux+Win · £1000 · industrial',
+    scores:[1,1,3,3,2], color:'#BA7517', dash:[4,2],
+    reasons:[
+      'Personal Edition costs €1000 — the most expensive option on this list.',
+      'Proprietary, though it runs on Linux which is unusual. The codebase itself is not open.',
+      'Powerful but complex — designed for dobby and jacquard CAD/CAM at industrial scale.',
+      'Has PDF manuals and online tutorials, but support is geared toward industrial users.',
+      'Not built for beginners. The scale and feature set is overwhelming for independent makers.'
+    ]
+  },
+  {
+    name:'WeaveDrafter', note:'Free · browser · open',
+    scores:[5,5,3,2,4], color:'#3B6D11', dash:[],
+    reasons:[
+      'Completely free to use — no licence, no paywall.',
+      'Open source and browser-based. One of the rare examples of genuinely open textile software.',
+      'Functional but basic — works well for simple drafts, less so for complex structures.',
+      'Small community, limited documentation. Not widely discussed on forums.',
+      'Low barrier to entry. Easy to pick up for someone new to digital weaving tools.'
+    ]
+  },
+  {
+    name:'Handweaving.net', note:'Free · browser · community-built',
+    scores:[5,5,4,5,5], color:'#993556', dash:[2,2],
+    reasons:[
+      'Free to use. Optional subscription but core tools are accessible without paying.',
+      'Open community model — all drafts shared in WIF format, compatible with any weaving software.',
+      'Browser-based, no installation needed. Built-in tools for editing drafts directly in the archive.',
+      'The largest weaving community resource online — extensive pattern archive, active user base.',
+      'The most accessible starting point for any weaver wanting to explore digital drafts.'
+    ]
+  },
+  {
+    name:'WeaveIt', note:'iOS/Android/Mac/Win · £20 · mobile',
+    scores:[4,1,5,4,5], color:'#1D9E75', dash:[5,2],
+    reasons:[
+      'Around £20 for the app — very affordable. Add-ons available for extra features.',
+      'Proprietary app. Not open source.',
+      'Touch-based interface praised for being intuitive. Works across phones, tablets and desktop.',
+      'Developed by Canyon Art — developer Sally is known to respond to user questions personally.',
+      'One of the most beginner-friendly options. Specifically mentioned as a great starting point for new weavers.'
+    ]
+  },
+  {
+    name:'TempoWeave', note:'Mac+PC · paid · intuitive for weavers?',
+    scores:[3,1,5,3,5], color:'#7F77DD', dash:[3,1,3],
+    reasons:[
+      'Paid software — pricing not publicly listed. Mid-range assumed based on community discussion.',
+      'Proprietary. Not open source.',
+      '"Built by passionate handweavers who wanted software that mirrored the way they think about the process." This philosophy shows in its interface design.',
+      'Smaller community than Fiberworks, but growing. Often paired with TempoTreadle loom hardware.',
+      'Step-by-step guides and an interface built around how weavers actually think makes it highly accessible for beginners.'
+    ]
+  },
+  {
+    name:'Weaveroo', note:'Mac · App Store · dobby-focused',
+    scores:[4,1,5,3,4], color:'#D4537E', dash:[6,2,2,2],
+    reasons:[
+      'Available on Mac App Store — affordable app-store pricing model.',
+      'Proprietary app. Not open source.',
+      '"Designed from the ground up to provide powerful editing and visualisation features with a user friendly interface."',
+      'Smaller community. A free iPad viewer (WeaverooView) exists, suggesting some commitment to broader access.',
+      'Explicitly designed for both seasoned professionals and beginners — dobby and hand loom focused.'
+    ]
+  },
+];
+
+const axes = ['Cost / affordability','Open source / free','Ease of use','Community support','Beginner accessibility'];
+const visible = new Set(softwares.map(s => s.name));
+let activeCard = null;
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function buildDatasets() {
+  return softwares.filter(s => visible.has(s.name)).map(s => ({
+    label: s.name, data: s.scores,
+    borderColor: s.color, backgroundColor: hexToRgba(s.color, 0.07),
+    borderWidth: 1.5, borderDash: s.dash,
+    pointBackgroundColor: s.color, pointRadius: 3, pointHoverRadius: 5,
+  }));
+}
+
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+const labelColor = isDark ? '#d4d4d4' : '#444441';
+
+let chart = new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: { labels: axes, datasets: buildDatasets() },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}/5` } },
+    },
+    scales: {
+      r: {
+        min: 0, max: 5,
+        ticks: { stepSize: 1, display: false },
+        grid: { color: gridColor },
+        angleLines: { color: gridColor },
+        pointLabels: { color: labelColor, font: { size: 12 } },
+      },
+    },
+  },
+});
+
+function showBreakdown(s) {
+  const el = document.getElementById('breakdown');
+  el.classList.add('visible');
+  el.innerHTML = `
+    <div class="breakdown-header">
+      <div>
+        <div class="breakdown-name" style="color:${s.color}">${s.name}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px;">${s.note}</div>
+      </div>
+      <button class="breakdown-close" onclick="closeBreakdown()">×</button>
+    </div>
+    ${axes.map((axis, i) => `
+      <div class="score-row">
+        <div class="score-axis">${axis}</div>
+        <div class="score-bar-wrap"><div class="score-bar" style="width:${s.scores[i]/5*100}%;background:${s.color}"></div></div>
+        <div class="score-val" style="color:${s.color}">${s.scores[i]}</div>
+      </div>
+      <div class="score-reason">${s.reasons[i]}</div>
+    `).join('')}
+  `;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeBreakdown() {
+  document.getElementById('breakdown').classList.remove('visible');
+  if (activeCard) { activeCard.classList.remove('active'); activeCard = null; }
+}
+
+function buildLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  softwares.forEach(s => {
+    const active = visible.has(s.name);
+    const btn = document.createElement('button');
+    btn.style.cssText = `border:0.5px solid ${active ? s.color : '#ccc'};background:${active ? hexToRgba(s.color,0.1) : 'transparent'};color:${active ? s.color : '#aaa'};`;
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:7px;height:7px;border-radius:2px;background:${active ? s.color : '#ccc'};display:inline-block;`;
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(' ' + s.name));
+    btn.onclick = () => {
+      if (visible.has(s.name)) { if (visible.size > 1) visible.delete(s.name); }
+      else visible.add(s.name);
+      chart.data.datasets = buildDatasets();
+      chart.update();
+      buildLegend(); buildCards();
+    };
+    el.appendChild(btn);
+  });
+}
+
+function buildCards() {
+  const el = document.getElementById('score-cards');
+  el.innerHTML = '';
+  softwares.filter(s => visible.has(s.name)).forEach(s => {
+    const avg = (s.scores.reduce((a,b)=>a+b,0)/s.scores.length).toFixed(1);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.borderLeft = `2px solid ${s.color}`;
+    card.innerHTML = `
+      <div class="card-name">${s.name}</div>
+      <div class="card-note">${s.note}</div>
+      <div class="card-score" style="color:${s.color}">${avg}<span> / 5 — click for detail</span></div>
+    `;
+    card.onclick = () => {
+      if (activeCard === card) { closeBreakdown(); return; }
+      if (activeCard) activeCard.style.boxShadow = '';
+      activeCard = card;
+      card.style.boxShadow = `0 0 0 1.5px ${s.color}`;
+      showBreakdown(s);
+    };
+    el.appendChild(card);
+  });
+}
+
+buildLegend();
+buildCards();
+</script>
+</body>
+</html>
